@@ -1,0 +1,27 @@
+### Create new user
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{
+  "id": 4,
+  "firstName": "Joan 4",
+  "lastName": "Cabezas",
+  "age": 19
+}
+
+### Get user by id
+GET http://localhost:8080/users/1
+
+### Update whole user data
+PUT http://localhost:8080/users/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "firstName": "Joan Santiago",
+  "lastName": "Cabezas",
+  "age": 19
+}
+
+### Get users
+GET http://localhost:8080/users
