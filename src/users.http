@@ -3,8 +3,7 @@ POST http://localhost:8080/users
 Content-Type: application/json
 
 {
-  "id": 4,
-  "firstName": "Joan 4",
+  "firstName": "Joan",
   "lastName": "Cabezas",
   "age": 19
 }
@@ -25,3 +24,7 @@ Content-Type: application/json
 
 ### Get users
 GET http://localhost:8080/users
+
+
+### Delete user
+DELETE http://localhost:8080/users/1

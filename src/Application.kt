@@ -1,5 +1,7 @@
 package com.josancamon19
 
+import com.josancamon19.controllers.UserController
+import com.josancamon19.db.DbSettings
 import com.josancamon19.models.User
 import io.ktor.application.*
 import io.ktor.auth.*
@@ -9,6 +11,8 @@ import io.ktor.routing.*
 import io.ktor.http.*
 import io.ktor.gson.*
 import io.ktor.features.*
+import org.jetbrains.exposed.sql.Database
+
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -17,24 +21,28 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 fun Application.module(testing: Boolean = false) {
     install(ContentNegotiation) {
         gson {
+            setPrettyPrinting()
         }
     }
+    DbSettings.initDb
     routes()
+
 }
 
 val users = mutableListOf<User>()
 
 fun Application.routes() {
+    val usersController = UserController()
     routing {
         route("/users") {
             get {
-                call.respond(users)
+                call.respond(usersController.getAll())
             }
             get("/{id}") {
                 when (val userId = call.parameters["id"]?.toIntOrNull()) {
                     null -> call.respond(HttpStatusCode.BadRequest)
                     else -> {
-                        when (val user = users.firstOrNull { it.id == userId }) {
+                        when (val user = usersController.getUserById(userId)) {
                             null -> call.respond(HttpStatusCode.NotFound, message = "User not found")
                             else -> call.respond(user)
                         }
@@ -42,7 +50,7 @@ fun Application.routes() {
                 }
             }
             post {
-                users.add(call.receive())
+                usersController.createUser(call.receive())
                 call.respond(HttpStatusCode.Created)
             }
             put("/{id}") {
@@ -50,29 +58,22 @@ fun Application.routes() {
                 when (val userId = call.parameters["id"]?.toIntOrNull()) {
                     null -> call.respond(HttpStatusCode.BadRequest)
                     else -> {
-                        when (val user = users.firstOrNull { it.id == userId }) {
-                            null -> call.respond(HttpStatusCode.NotFound)
-                            else -> {
-                                users[users.indexOf(user)] = newUser
-                                call.respond(HttpStatusCode.OK)
-                            }
+                        if (usersController.updateUser(userId, newUser) == 0) {
+                            call.respond(HttpStatusCode.NotFound)
                         }
+                        call.respond(HttpStatusCode.OK)
                     }
                 }
-
             }
 
             delete("/{id}") {
                 when (val userId = call.parameters["id"]?.toIntOrNull()) {
                     null -> call.respond(HttpStatusCode.BadRequest)
                     else -> {
-                        when (val user = users.firstOrNull { it.id == userId }) {
-                            null -> call.respond(HttpStatusCode.NotFound, message = "User not found")
-                            else -> {
-                                users.remove(user)
-                                call.respond(HttpStatusCode.OK)
-                            }
+                        if (usersController.deleteUser(userId) == 0) {
+                            call.respond(HttpStatusCode.NotFound)
                         }
+                        call.respond(HttpStatusCode.OK)
                     }
                 }
             }
