@@ -65,7 +65,30 @@ read the article, I thought, I need to get better in Kotlin, ```TODO complete th
             val age: Column<Int> = integer("age")
         }
         ```
-      
+    - Adding flyway for database migrations, we don't want to create manually the database tables.
+        Dependency
+        ```groovy
+          compile 'org.flywaydb:flyway-core:5.2.4'  
+      ```
+        Below build.gradle buildscript{}
+        ```groovy
+          plugins {
+              id "org.flywaydb.flyway" version "5.2.4"
+          }
+          
+          flyway {
+              url = 'jdbc:postgresql://ec2-54-172-173-58.compute-1.amazonaws.com:5432/d7dokb84n45r9e?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory'
+              user = 'kyjxbkmfybtuzh'
+              password = '226085995a4d0383cf99a8b71d3284e6fdfb118696ea8c1b5f96b30acb30e2cc'
+              baselineOnMigrate=true
+              locations = ["filesystem:resources/db/migration"]
+          }
+        ```
+        Lastly add the following lines after the Database.Connect
+        ```kotlin
+          val flyway = Flyway.configure().dataSource(url, user, password).load()
+          flyway.migrate()
+        ```
     - The Users operations controller, for this, the following function was added to the DbSettings class, in order
     to run the Db operations on the IO Thread using a suspend function, check the ```class UserController```, all db operations are executed
     there.
@@ -76,3 +99,6 @@ read the article, I thought, I need to get better in Kotlin, ```TODO complete th
                 }
         ```
     - Lastly, fix the enpoints to not use anymore the mutableList, instead use the usersController class for the CRUD operations
+    - Resources used:
+        1. https://www.novatec-gmbh.de/en/blog/creating-a-rest-application-with-ktor-and-exposed/
+        2. https://www.thebookofjoel.com/kotlin-ktor-exposed-postgres
