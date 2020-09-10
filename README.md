@@ -206,4 +206,9 @@ read the article, I thought, I need to get better in Kotlin, ```TODO complete th
                GET http://localhost:8080/users/2
                Authorization: Bearer {{auth_token}}  
             ```
+5. heroku-deployment
+
+    The process was relatively simple, as explained in the official documentation, [here](https://ktor.io/servers/deploy/hosting/heroku.html), 
+    the unique issue I had, was with the variable mainClassName, solution [here](https://stackoverflow.com/questions/36917530/gradle-error-with-lack-of-mainclassname-property-in-gradle-build).
+    Do not forget to set the right gradle task ```heroku config:set GRADLE_TASK="shadowJar"```
     
