@@ -1,1 +1,1 @@
-web: java -jar target/test1-0.0.1.jar
+web: java -jar build/libs/test1-0.0.1.jar
