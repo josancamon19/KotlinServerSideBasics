@@ -1,0 +1,6 @@
+{
+  "name": "Kotlin Server Side Example",
+  "description": "Kotlin Server Side Example",
+  "image": "heroku/java",
+  "addons": [ "heroku-postgresql" ],
+}
