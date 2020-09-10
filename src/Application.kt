@@ -3,6 +3,7 @@ package com.josancamon19
 import com.josancamon19.controllers.UserController
 import com.josancamon19.db.DbSettings
 import com.josancamon19.models.User
+import com.josancamon19.utils.SimpleJWT
 import io.ktor.application.*
 import io.ktor.auth.*
 import io.ktor.auth.basic
@@ -27,6 +28,8 @@ val hashedUserTable = UserHashedTableAuth(
         "test" to Base64.getDecoder().decode("GSjkHCHGAxTTbnkEDBbVYd+PUFRlcWiumc4+MWE9Rvw=") // sha256 for "test"
     )
 )
+
+@KtorExperimentalAPI
 @Suppress("unused") // Referenced in application.conf
 @kotlin.jvm.JvmOverloads
 fun Application.users(testing: Boolean = false) {
@@ -35,6 +38,7 @@ fun Application.users(testing: Boolean = false) {
             setPrettyPrinting()
         }
     }
+
     install(Authentication) {
         basic("basicAuthExample") {
             realm = "ktor"
@@ -45,10 +49,35 @@ fun Application.users(testing: Boolean = false) {
                 if (credentials.password == "${credentials.name}123") UserIdPrincipal(credentials.name) else null
             }
         }
+        jwt("jwtAuth") {
+            realm = SimpleJWT.jwtRealm
+            verifier(SimpleJWT.makeJwtVerifier())
+            validate { credential ->
+                println(credential.payload)
+                if (credential.payload.audience.contains(SimpleJWT.jwtAudience)) JWTPrincipal(credential.payload) else null
+            }
+        }
     }
     DbSettings.initDb
+    auth()
     routes()
 
+}
+
+data class Login(val id: Int)
+
+fun Application.auth() {
+    routing {
+        post("/login") {
+            val simpleJwt = SimpleJWT()
+            val usersController = UserController()
+            val loginCredentials = call.receive<Login>()
+
+            usersController.getUserById(loginCredentials.id)
+                ?.let { user -> call.respond(mapOf("token" to simpleJwt.sign(user.firstName))) }
+            call.respond(HttpStatusCode.BadRequest)
+        }
+    }
 }
 
 fun Application.routes() {
@@ -60,13 +89,15 @@ fun Application.routes() {
                     call.respond(usersController.getAll())
                 }
             }
-            get("/{id}") {
-                when (val userId = call.parameters["id"]?.toIntOrNull()) {
-                    null -> call.respond(HttpStatusCode.BadRequest)
-                    else -> {
-                        when (val user = usersController.getUserById(userId)) {
-                            null -> call.respond(HttpStatusCode.NotFound, message = "User not found")
-                            else -> call.respond(user)
+            authenticate("jwtAuth") {
+                get("/{id}") {
+                    when (val userId = call.parameters["id"]?.toIntOrNull()) {
+                        null -> call.respond(HttpStatusCode.BadRequest)
+                        else -> {
+                            when (val user = usersController.getUserById(userId)) {
+                                null -> call.respond(HttpStatusCode.NotFound, message = "User not found")
+                                else -> call.respond(user)
+                            }
                         }
                     }
                 }

@@ -104,37 +104,106 @@ read the article, I thought, I need to get better in Kotlin, ```TODO complete th
         
 3. basic-authentication
     - Dependencies required:
-    ```groovy
-       implementation "io.ktor:ktor-auth-jwt:$ktor_version"
-    ```
+        ```groovy
+           implementation "io.ktor:ktor-auth-jwt:$ktor_version"
+        ```
     - Features installed
-    ```kotlin
-   install(Authentication) {
-           basic("basicAuthExample") {
-               realm = "ktor"
-               validate { credentials ->
-                   // Basically, you decide what is a valid user, does not matter how
-                   println(credentials)
-                   println(UserIdPrincipal(credentials.name))
-                   if (credentials.password == "${credentials.name}123") UserIdPrincipal(credentials.name) else null
+        ```kotlin
+       install(Authentication) {
+               basic("basicAuthExample") {
+                   realm = "ktor"
+                   validate { credentials ->
+                       // Basically, you decide what is a valid user, does not matter how
+                       println(credentials)
+                       println(UserIdPrincipal(credentials.name))
+                       if (credentials.password == "${credentials.name}123") UserIdPrincipal(credentials.name) else null
+                   }
                }
            }
-       }
-    ```
+        ```
     There is something important in here *Basically, you decide what is a valid user, does not matter how*,
      what it means, is that you receive credentials object with property name and password, after that you decide
      what is a valid user for your application.
    - Set authentication in endpoints, for doing that you just have to wrap the route with ```authenticate("name") {route{}}```
-   ``` kotlin
-    authenticate("basicAuthExample") {
-        get {
-            call.respond(usersController.getAll())
+       ``` kotlin
+        authenticate("basicAuthExample") {
+            get {
+                call.respond(usersController.getAll())
+            }
         }
-    }
-    ```
+        ```
    - Now on ```users.http``` in order to use the endpoint ```users/``` the following modification was required
-   ``` http request
-    ### Get users
-    GET http://localhost:8080/users
-    Authorization: Basic josancamon19 josancamon19123
-    ```
+       ``` http request
+        ### Get users
+        GET http://localhost:8080/users
+        Authorization: Basic josancamon19 josancamon19123
+        ```
+
+4. jwt-authentication
+    - An utility class ```SimpleJWT``` with 2 important parts
+        * The JWT Token creation 
+        ```kotlin
+          JWT.create()
+              .withClaim("name", name)
+              .withAudience(jwtAudience)
+              .withIssuer(jwtIssuer)
+              .withExpiresAt(getExpiration())
+              .sign(algorithm)  
+      ```
+        * The JWT Token verifier which is used to validate the token received
+        ```kotlin
+          fun makeJwtVerifier(): JWTVerifier = JWT
+              .require(Algorithm.HMAC256(secret))
+              .withAudience(jwtAudience)
+              .withIssuer(jwtIssuer)
+              .build()  
+      ```
+    - on Authentication install create jwt auth configuration
+        ``` kotlin
+           jwt("jwtAuth") {
+               realm = SimpleJWT.jwtRealm
+               verifier(SimpleJWT.makeJwtVerifier())
+               validate { credential ->
+                   println(credential.payload)
+                   if (credential.payload.audience.contains(SimpleJWT.jwtAudience)) JWTPrincipal(credential.payload) else null
+               }
+           }
+       ```
+    - Lastly a new module with the login route (Off course ideally you should have id and hashed password, etc)
+        ``` kotlin
+           data class Login(val id: Int)
+           fun Application.auth() {
+               routing {
+                   post("/login") {
+                       val simpleJwt = SimpleJWT()
+                       val usersController = UserController()
+                       val loginCredentials = call.receive<Login>()
+           
+                       usersController.getUserById(loginCredentials.id)
+                           ?.let { user -> call.respond(mapOf("token" to simpleJwt.sign(user.firstName))) }
+                       call.respond(HttpStatusCode.BadRequest)
+                   }
+               }
+           }
+       ```
+    - Same as with simple authentication, in order to add auth to an endpoint, add the route wrapper with the right name
+    ```authenticate("jwtAuth") {route{}}```, for this example, I did it on getUserById
+    
+        - In order to use the endpoint with JWT Auth in users.http, we need to login first, and save the token as a 
+        variable in order to be used later in our endpoint which needs authentication
+            ```
+               POST http://localhost:8080/login
+               Content-Type: application/json
+               
+               {
+                 "id": 2
+               }
+               > {%client.global.set("auth_token", response.body.token);%}      
+            ```
+        - And lastly, use the endpoint with the header ```Authorization Bearer token``, token being the variable saved from 
+        the login endpoint
+            ```
+               GET http://localhost:8080/users/2
+               Authorization: Bearer {{auth_token}}  
+            ```
+    
