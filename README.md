@@ -36,7 +36,6 @@ read the article, I thought, I need to get better in Kotlin, ```TODO complete th
         * Youtube [PreBeta](https://www.youtube.com/watch?v=fYoqw6EIX6Y&t) channel, pretty good starting point, if you speak spanish
         * Youtube [goobar](https://www.youtube.com/watch?v=zHQ7oBYSHrY) simple request routing example
         
-    
 2. db-crud (PostgreSQL CRUD operations with users table)
     
     Having the previous endpoints from the branch ```mutablelist-crud```, my next step was to create a real CRUD. 
@@ -102,3 +101,40 @@ read the article, I thought, I need to get better in Kotlin, ```TODO complete th
     - Resources used:
         1. https://www.novatec-gmbh.de/en/blog/creating-a-rest-application-with-ktor-and-exposed/
         2. https://www.thebookofjoel.com/kotlin-ktor-exposed-postgres
+        
+3. basic-authentication
+    - Dependencies required:
+    ```groovy
+       implementation "io.ktor:ktor-auth-jwt:$ktor_version"
+    ```
+    - Features installed
+    ```kotlin
+   install(Authentication) {
+           basic("basicAuthExample") {
+               realm = "ktor"
+               validate { credentials ->
+                   // Basically, you decide what is a valid user, does not matter how
+                   println(credentials)
+                   println(UserIdPrincipal(credentials.name))
+                   if (credentials.password == "${credentials.name}123") UserIdPrincipal(credentials.name) else null
+               }
+           }
+       }
+    ```
+    There is something important in here *Basically, you decide what is a valid user, does not matter how*,
+     what it means, is that you receive credentials object with property name and password, after that you decide
+     what is a valid user for your application.
+   - Set authentication in endpoints, for doing that you just have to wrap the route with ```authenticate("name") {route{}}```
+   ``` kotlin
+    authenticate("basicAuthExample") {
+        get {
+            call.respond(usersController.getAll())
+        }
+    }
+    ```
+   - Now on ```users.http``` in order to use the endpoint ```users/``` the following modification was required
+   ``` http request
+    ### Get users
+    GET http://localhost:8080/users
+    Authorization: Basic josancamon19 josancamon19123
+    ```

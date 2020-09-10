@@ -24,7 +24,7 @@ Content-Type: application/json
 
 ### Get users
 GET http://localhost:8080/users
-
+Authorization: Basic josancamon19 josancamon19123
 
 ### Delete user
 DELETE http://localhost:8080/users/1

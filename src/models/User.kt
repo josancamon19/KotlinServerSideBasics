@@ -1,5 +1,6 @@
 package com.josancamon19.models
 
+import io.ktor.auth.*
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Table
 import java.util.*
@@ -9,7 +10,7 @@ data class User(
     val firstName: String,
     val lastName: String,
     val age: Int
-)
+):Principal
 
 object Users : Table() {
     val id: Column<Int> = integer("id").autoIncrement().primaryKey()
